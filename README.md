@@ -4,7 +4,7 @@ This application transcribes the audio into text, then summarizes it and asks it
 This is a complete application that uses [OpenAI Whisper](https://github.com/openai/whisper) to transcribe audios, uses [Chroma](https://docs.trychroma.com/) to store vectorized texts, and uses [langchain](https://github.com/hwchase17/langchain) to interact with LLMs.
 
 There is a demo here: https://cet63--pod-fastapi-app.modal.run/
-, which forked by [Modal examples](https://github.com/modal-labs/modal-examples/tree/main/06_gpu_and_ml/openai_whisper/pod_transcriber). It splits an audio to small chunks using the ffmpeg `silencedetect` filter, and then Modal spins up 100-300 containers for a single transcription run, so hours of audio can be transcribed on-demand in a few minutes.
+, which is forked by [Modal examples](https://github.com/modal-labs/modal-examples/tree/main/06_gpu_and_ml/openai_whisper/pod_transcriber). It splits an audio to small chunks using the ffmpeg `silencedetect` filter, and then Modal spins up 100-300 containers for a single transcription run, so hours of audio can be transcribed on-demand in a few minutes.
 
 
 ## Architecture
@@ -24,9 +24,9 @@ The entire application is hosted serverlessly on [Modal](https://modal.com) and 
 
 ### OpenAI API-KEY Secret
 
-If you want to use , you'll need to [create a openai account and get an API key](https://platform.openai.com/).
+If you want to use `Summarize` and `Ask`, you'll need to [create a openai account and get an API key](https://platform.openai.com/).
 
-Then, create a [Modal Secret](https://modal.com/secrets/) for OpenAI:
+Then, create a [Modal Secret](https://modal.com/secrets/) for OpenAI-API-KEY:
 
 - `my-openai-secret`
 
