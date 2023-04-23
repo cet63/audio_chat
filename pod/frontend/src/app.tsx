@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Key, useState } from "react";
 import { HashRouter, Link, Routes, Route } from "react-router-dom";
 import Episode from "./routes/episode";
 import Spinner from "./components/Spinner";
@@ -17,23 +17,30 @@ function NonEnglishLanguageWarning() {
 // @ts-ignore
 function EpisodeCard({ ep }) {
   return (
-    <ul className="bg-white rounded-lg border border-gray-200 w-384 text-gray-900">
-      <li
-        key={ep.guid_hash}
-        className="px-6 py-2 border-b border-gray-200 w-full rounded-t-lg"
-      >
-        {ep.transcribed ? "📃 " : "  "}
-        <Link
-          to={`/episode/${ep.guid_hash}`}
-          className="text-blue-700 no-underline hover:underline"
-        >
-          {ep.original_download_link}
-        </Link>
-        {ep.language && !ep.language.startsWith("en") ?
-              <NonEnglishLanguageWarning /> : null}
-      </li>
-    </ul>
+    <Link to={`/episode/${ep.guid_hash}`} className="px-6 py-1 group">
+      <div className="font-bold mb-2 group-hover:underline">
+        {ep.original_download_link}
+      </div>
+      {ep.language && !ep.language.startsWith("en") ?
+        <NonEnglishLanguageWarning /> : null}
+    </Link>
+
   );
+}
+
+// @ts-ignore
+function EpList({ eplist }) {
+  // @ts-ignore
+  const listItems = eplist.map((ep) => (
+    <li
+      key={ep.guid_hash}
+      className="max-w-2xl overflow-hidden border-indigo-400 border-t-2"
+    >
+      <EpisodeCard ep={ep} />
+    </li>
+  ));
+
+  return <ul className="py-4 podcast-list">{listItems}</ul>;
 }
 
 // @ts-ignore
@@ -100,7 +107,7 @@ function Form({ onSubmit, searching }) {
 
 function Search() {
   const [searching, setSearching] = useState(false);
-  const [ep, setEp] = useState();
+  const [eplist, setEplist] = useState();
 
   const handleSubmission = async (fileUrl: string) => {
     setSearching(true);
@@ -115,7 +122,7 @@ function Search() {
       throw new Error("An error occurred: " + resp.status);
     }
     const body = await resp.json();
-    setEp(body);
+    setEplist(body);
     setSearching(false);
   };
 
@@ -123,7 +130,7 @@ function Search() {
     <div className="min-w-full min-h-screen screen pt-8">
       <div className="mx-auto max-w-2xl my-8 shadow-lg rounded-xl bg-white p-6">
         <Form onSubmit={handleSubmission} searching={searching} />
-        {ep && !searching && <EpisodeCard ep={ep} />}
+        {eplist && !searching && <EpList eplist={eplist} />}
       </div>
 
     </div>

@@ -8,7 +8,9 @@ import pathlib
 from typing import Iterator, Tuple
 import hashlib
 import itertools
+import re
 
+import requests
 import modal
 
 from . import config, podcast
@@ -30,6 +32,7 @@ app_image = (
         "langchain",
         "chromadb",
         "openai",
+        "requests",
     )
 )
 
@@ -77,10 +80,20 @@ def fastapi_app():
 )
 def search(file_url: str):
     logger.info(f"Searching for '{file_url}'")
+    headers = {
+        "user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"
+    }
+    ret = requests.get(file_url, headers=headers)
+    text = ret.text
+    links = re.findall(r'https?://[^\s]+\.mp[34]', text)
+    links = set([x.strip() for x in links])
+    return list(map(process_url, links))
+    
+def process_url(file_url: str):
     url_hash = hashlib.md5(file_url.encode('utf-8')).hexdigest()
 
     ep_metadata_path = get_episode_metadata_path(url_hash)
-    logger.info(f"Searching for '{file_url}', hash#{url_hash}")
+    logger.info(f"process_url#'{file_url}', hash#{url_hash}")
     if not ep_metadata_path.exists():
         ep_metadata_path.parent.mkdir(parents=True, exist_ok=True)
 
