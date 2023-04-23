@@ -76,7 +76,15 @@ function Form({ onSubmit, searching }) {
 
       <div className="text-gray-700">
         <p className="mb-4">
-          <strong>Enter a conference audio's URL. Click on the result to transcribe and chat with it.</strong>
+          <strong>Enter a conference website's URL. Click on the result to transcribe and chat with it.</strong>
+        </p>
+
+        <p className="mb-1">
+          Try searching for 'https://www.roadshowing.com/roadshowing/info.html?id=76004'.
+        </p>
+        <p className="mb-1">
+          <span>If you just want to see some examples, try this: </span>
+          <a className="text-indigo-500 no-underline hover:underline" href="/#/episode/3f985a86e2c7948944282ccab50a07a3"><em>Apple Financial Results - Q4 2022</em></a>.
         </p>
       </div>
 
@@ -87,7 +95,7 @@ function Form({ onSubmit, searching }) {
             type="text"
             value={fileUrl}
             onChange={onChange}
-            placeholder="Input a conference audio's URL"
+            placeholder="Input a conference's URL"
             className="h-10 w-full rounded-md pl-10 text-md text-gray-900 bg-gray-50 border-2 border-zinc-900"
           />
         </div>

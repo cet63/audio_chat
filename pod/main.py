@@ -80,12 +80,16 @@ def fastapi_app():
 )
 def search(file_url: str):
     logger.info(f"Searching for '{file_url}'")
+    pattern = r'https?://[^\s]+\.mp[34]'
+    if re.match(pattern, file_url):
+        return [process_url(file_url)]
+    
     headers = {
         "user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"
     }
     ret = requests.get(file_url, headers=headers)
     text = ret.text
-    links = re.findall(r'https?://[^\s]+\.mp[34]', text)
+    links = re.findall(pattern, text)
     links = set([x.strip() for x in links])
     return list(map(process_url, links))
     
