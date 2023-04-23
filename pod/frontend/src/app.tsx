@@ -18,7 +18,7 @@ function NonEnglishLanguageWarning() {
 function EpisodeCard({ ep }) {
   return (
     <Link to={`/episode/${ep.guid_hash}`} className="px-6 py-1 group">
-      <div className="font-bold mb-2 group-hover:underline">
+      <div className="font-bold mb-2 group-hover:underline hover:text-red-500">
         {ep.original_download_link}
       </div>
       {ep.language && !ep.language.startsWith("en") ?
