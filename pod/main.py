@@ -320,6 +320,17 @@ def get_segments(guid_hash: str):
         data = json.load(f)
     return podcast.coalesce_short_transcript_segments(data["segments"])
 
+def merge(orig_list: list[str]) -> list[str]:
+    new_list = []
+    s1 = ''
+    length = len(orig_list)
+    for i in range(0, length):
+        s1 += ('' if s1 == '' else ' ') + orig_list[i]
+        if len(s1)>=1000 or  i is length-1:
+            new_list.append(s1)
+            s1 = ''
+    return new_list
+
 def get_vector_index(guid_hash: str):
     from langchain.vectorstores import Chroma
     from langchain.embeddings.openai import OpenAIEmbeddings
@@ -328,7 +339,9 @@ def get_vector_index(guid_hash: str):
     index_path = get_vectorindex_path(guid_hash)
     if not index_path.exists():
         segments = get_segments(guid_hash)
-        texts = [t["text"] for t in segments]
+        texts = merge([t["text"] for t in segments])
+        logger.debug(f"get_vector_index, t0#{texts[0]}")
+        logger.debug(f"get_vector_index, t3#{texts[3]}")
 
         index_path.mkdir(parents=True, exist_ok=True)
         # supplying a persist_directory will store the embeddings on disk
