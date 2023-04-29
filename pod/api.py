@@ -2,7 +2,7 @@ import json
 import time
 from typing import List, NamedTuple
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, UploadFile
 from pydantic import BaseModel
 import re
 
@@ -12,8 +12,8 @@ from .main import (
     get_transcript_path,
     process_episode,
     search,
-    summarize_by_langchain,
-    qa_by_langchain,
+    summarize,
+    qa,
 )
 from .podcast import coalesce_short_transcript_segments
 
@@ -29,12 +29,10 @@ class InProgressJob(NamedTuple):
     start_time: int
 
 
-class SearchItem(BaseModel):
-    file_url: str
 
-@web_app.post("/api/search")
-async def search_endpoint(item: SearchItem, req: Request):
-    logger.info(f"req #{req.url.path} from client#{req.client}, item#{item}")
+@web_app.post("/api/upload")
+async def upload_endpoint(file: UploadFile, req: Request):
+    logger.info(f"req #{req.url.path} from client#{req.client}, file#{file.filename}")
     file_url = item.file_url.strip()
     if not re.match(r'^(http|https)?:/{2}\w.+$', file_url):
         raise HTTPException(status_code=400, detail="Invalid url")

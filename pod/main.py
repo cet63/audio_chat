@@ -340,8 +340,6 @@ def get_vector_index(guid_hash: str):
     if not index_path.exists():
         segments = get_segments(guid_hash)
         texts = merge([t["text"] for t in segments])
-        logger.debug(f"get_vector_index, t0#{texts[0]}")
-        logger.debug(f"get_vector_index, t3#{texts[3]}")
 
         index_path.mkdir(parents=True, exist_ok=True)
         # supplying a persist_directory will store the embeddings on disk
@@ -361,7 +359,7 @@ def get_vector_index(guid_hash: str):
     shared_volumes={config.CACHE_DIR: volume},
     timeout=1000,
 )
-def qa_by_langchain(query: str, guid_hash: str) -> str:
+def qa(query: str, guid_hash: str) -> str:
     from langchain.llms import OpenAI
     from langchain.chains.question_answering import load_qa_chain
     '''
@@ -389,7 +387,7 @@ def qa_by_langchain(query: str, guid_hash: str) -> str:
     shared_volumes={config.CACHE_DIR: volume},
     timeout=900,
 )
-def summarize_by_langchain(guid_hash: str, method: str = "1") -> str:
+def summarize(guid_hash: str, method: str = "1") -> str:
     summary_file = get_summary_file(guid_hash, method)
     if summary_file.exists():
         with open(summary_file, "r") as f:
