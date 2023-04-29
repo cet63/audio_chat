@@ -292,7 +292,7 @@ function ResultCard({ result }: { result: string }) {
 }
 
 /**
- * Displays a button for summarizing and a button for QA.
+ * Displays a button for summary.
  */
 function SummaryView({ episodeId }: { episodeId: string }) {
   const [summarizing, setSummarizing] = useState(false);
@@ -332,7 +332,7 @@ function SummaryView({ episodeId }: { episodeId: string }) {
 }
 
 /**
- * Displays a button for QA.
+ * Displays a button for QnA.
  */
 function QaView({ episodeId }: { episodeId: string }) {
   const [querying, setQuerying] = useState<boolean>(false);

@@ -1,16 +1,13 @@
 """
-whisper-pod-transcriber uses OpenAI's Whisper modal to do speech-to-text transcription
-of podcasts.
+audio-transcriber uses OpenAI's Whisper modal to do speech-to-text transcription.
 """
 import datetime
 import json
-import pathlib
+from pathlib import Path
 from typing import Iterator, Tuple
 import hashlib
 import itertools
-import re
 
-import requests
 import modal
 
 from . import config, podcast
@@ -33,6 +30,7 @@ app_image = (
         "chromadb",
         "openai",
         "requests",
+        "content-size-limit-asgi",
     )
 )
 
@@ -45,16 +43,16 @@ stub = modal.Stub(
 stub.in_progress = modal.Dict()
 
 
-def get_episode_metadata_path(guid_hash: str) -> pathlib.Path:
-    return config.EP_METADATA_DIR / f"{guid_hash}.json"
+def get_metadata_file(guid_hash: str) -> Path:
+    return config.METADATA_DIR / f"{guid_hash}.json"
 
-def get_transcript_path(guid_hash: str) -> pathlib.Path:
+def get_transcript_file(guid_hash: str) -> Path:
     return config.TRANSCRIPTIONS_DIR / f"{guid_hash}.json"
 
-def get_vectorindex_path(guid_hash: str) -> pathlib.Path:
+def get_vectorindex_path(guid_hash: str) -> Path:
     return config.VECTORINDEX_DIR / guid_hash
 
-def get_summary_file(guid_hash: str, method: str) -> pathlib.Path:
+def get_summary_file(guid_hash: str, method: str) -> Path:
     return config.SUMMARY_DIR / f"{guid_hash}_{method}.json"
 
 
@@ -78,42 +76,35 @@ def fastapi_app():
     image=app_image,
     shared_volumes={config.CACHE_DIR: volume},
 )
-def search(file_url: str):
-    logger.info(f"Searching for '{file_url}'")
-    pattern = r'https?://[^\s]+\.mp[34]'
-    if re.match(pattern, file_url):
-        return [process_url(file_url)]
+def search(filename: str, content: bytes):
+    logger.info(f"Searching for '{filename}'")
+    return [process_file(filename, content)]
     
-    headers = {
-        "user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"
-    }
-    ret = requests.get(file_url, headers=headers)
-    text = ret.text
-    links = re.findall(pattern, text)
-    links = set([x.strip() for x in links])
-    return list(map(process_url, links))
-    
-def process_url(file_url: str):
-    url_hash = hashlib.md5(file_url.encode('utf-8')).hexdigest()
+def process_file(filename: str, content: bytes):
+    guid_hash = hashlib.md5(content).hexdigest()
 
-    ep_metadata_path = get_episode_metadata_path(url_hash)
-    logger.info(f"process_url#'{file_url}', hash#{url_hash}")
-    if not ep_metadata_path.exists():
-        ep_metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata_file = get_metadata_file(guid_hash)
+    logger.info(f"process_file#'{guid_hash}', hash#{guid_hash}")
+    if not metadata_file.exists():
+        config.RAW_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+        podcast.store_upload_audio(
+            content=content,
+            destination=config.RAW_AUDIO_DIR / guid_hash,
+        )
 
+        metadata_file.parent.mkdir(parents=True, exist_ok=True)
         ep_metadata = {
-            "guid_hash": url_hash,
+            "guid_hash": guid_hash,
             "transcribed": False,
-            "original_download_link": file_url,
+            "original_download_link": filename,
             "publish_date": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
-        with open(ep_metadata_path, "w") as f:
+        with open(metadata_file, "w") as f:
             json.dump(ep_metadata, f)
-
-        logger.info(f"Searching for '{file_url}', wrote metadata to #{ep_metadata_path}, success#{ep_metadata_path.exists()}")
+        logger.info(f"Searching for '{filename}', wrote metadata to #{metadata_file}, success#{metadata_file.exists()}")
         return ep_metadata
 
-    with open(ep_metadata_path, "r") as f:
+    with open(metadata_file, "r") as f:
         return json.load(f)
 
 
@@ -175,7 +166,7 @@ def split_silences(
 def transcribe_segment(
     start: float,
     end: float,
-    audio_filepath: pathlib.Path,
+    audio_filepath: Path,
     model: config.ModelSpec,
 ):
     import tempfile
@@ -221,8 +212,8 @@ def transcribe_segment(
     timeout=900,
 )
 def transcribe_episode(
-    audio_filepath: pathlib.Path,
-    result_path: pathlib.Path,
+    audio_filepath: Path,
+    result_path: Path,
     model: config.ModelSpec,
 ):
     segment_gen = split_silences(str(audio_filepath))
@@ -270,28 +261,21 @@ def process_episode(episode_id: str):
         model = config.DEFAULT_MODEL
         whisper._download(whisper._MODELS[model.name], str(config.MODEL_DIR), False)
 
-        config.RAW_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
         config.TRANSCRIPTIONS_DIR.mkdir(parents=True, exist_ok=True)
 
-        metadata_path = get_episode_metadata_path(episode_id)
+        metadata_path = get_metadata_file(episode_id)
         with open(metadata_path, "r") as f:
             data = json.load(f)
             episode = dacite.from_dict(
                 data_class=podcast.EpisodeMetadata, data=data
             )
 
-        destination_path = config.RAW_AUDIO_DIR / episode_id
-        podcast.store_original_audio(
-            url=episode.original_download_link,
-            destination=destination_path,
-        )
-
         logger.info(
             f"Using the {model.name} model which has {model.params} parameters."
         )
         logger.info(f"Wrote episode metadata to {metadata_path}")
 
-        transcription_path = get_transcript_path(episode.guid_hash)
+        transcription_path = get_transcript_file(episode.guid_hash)
         if transcription_path.exists():
             logger.info(
                 f"Transcription already exists for episode#{episode.guid_hash}."
@@ -299,7 +283,7 @@ def process_episode(episode_id: str):
             logger.info("Skipping transcription.")
         else:
             transcribe_episode.call(
-                audio_filepath=destination_path,
+                audio_filepath=config.RAW_AUDIO_DIR / episode_id,
                 result_path=transcription_path,
                 model=model,
             )
@@ -315,7 +299,7 @@ def process_episode(episode_id: str):
 
 
 def get_segments(guid_hash: str):
-    transcription_path = get_transcript_path(guid_hash)
+    transcription_path = get_transcript_file(guid_hash)
     with open(transcription_path, "r") as f:
         data = json.load(f)
     return podcast.coalesce_short_transcript_segments(data["segments"])

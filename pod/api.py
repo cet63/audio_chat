@@ -2,14 +2,14 @@ import json
 import time
 from typing import List, NamedTuple
 
-from fastapi import FastAPI, Request, HTTPException, UploadFile
+from fastapi import FastAPI, Request, UploadFile
 from pydantic import BaseModel
-import re
+from content_size_limit_asgi import ContentSizeLimitMiddleware
 
 from . import config
 from .main import (
-    get_episode_metadata_path,
-    get_transcript_path,
+    get_metadata_file,
+    get_transcript_file,
     process_episode,
     search,
     summarize,
@@ -19,6 +19,8 @@ from .podcast import coalesce_short_transcript_segments
 
 logger = config.get_logger(__name__)
 web_app = FastAPI()
+MAX_UPLOAD_FILE = 50 * 1024 * 1024
+web_app.add_middleware(ContentSizeLimitMiddleware, max_content_size=MAX_UPLOAD_FILE)
 
 # A transcription taking > 10 minutes should be exceedingly rare.
 MAX_JOB_AGE_SECS = 10 * 60
@@ -29,23 +31,20 @@ class InProgressJob(NamedTuple):
     start_time: int
 
 
-
 @web_app.post("/api/upload")
 async def upload_endpoint(file: UploadFile, req: Request):
     logger.info(f"req #{req.url.path} from client#{req.client}, file#{file.filename}")
-    file_url = item.file_url.strip()
-    if not re.match(r'^(http|https)?:/{2}\w.+$', file_url):
-        raise HTTPException(status_code=400, detail="Invalid url")
-    return search.call(file_url)
+    content = await file.read()
+    return search.call(file.filename, content)
 
 
 @web_app.get("/api/episode/{guid_hash}")
 async def get_episode(guid_hash: str, req: Request):
     logger.info(f"req #{req.url.path} from client#{req.client}, guid_hash#{guid_hash}")
-    episode_metadata_path = get_episode_metadata_path(guid_hash)
-    transcription_path = get_transcript_path(guid_hash)
+    episode_metadata_file = get_metadata_file(guid_hash)
+    transcription_path = get_transcript_file(guid_hash)
 
-    with open(episode_metadata_path, "r") as f:
+    with open(episode_metadata_file, "r") as f:
         metadata = json.load(f)
 
     if not transcription_path.exists():
@@ -134,7 +133,7 @@ async def poll_status(call_id: str):
 @web_app.get("/api/summarize/{guid_hash}")
 async def get_summary(guid_hash: str, req: Request):
     logger.info(f"req #{req.url.path} from client#{req.client}, guid_hash#{guid_hash}")
-    result = summarize_by_langchain.call(guid_hash)
+    result = summarize.call(guid_hash)
     logger.info(f"summarize1#{guid_hash}, result#{result}")
     return result
 
@@ -146,6 +145,6 @@ class QueryItem(BaseModel):
 async def get_qa(guid_hash: str, item: QueryItem, req: Request):
     logger.info(f"req #{req.url.path} from client#{req.client}, guid_hash#{guid_hash}, item#{item}")
     query = item.query
-    result = qa_by_langchain.call(query, guid_hash)
+    result = qa.call(query, guid_hash)
     logger.info(f"qa#{guid_hash}, query#{query}, result#{result}")
     return result

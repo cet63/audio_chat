@@ -1,5 +1,5 @@
 import dataclasses
-import pathlib
+from pathlib import Path
 import urllib.request
 from typing import NamedTuple, Optional, TypedDict
 
@@ -59,7 +59,7 @@ def sizeof_fmt(num, suffix="B") -> str:
 
 
 def store_original_audio(
-    url: str, destination: pathlib.Path, overwrite: bool = False
+    url: str, destination: Path, overwrite: bool = False
 ) -> None:
     if destination.exists():
         if overwrite:
@@ -77,6 +77,27 @@ def store_original_audio(
     logger.info(f"Downloaded {humanized_bytes_str} episode from URL.")
     with open(destination, "wb") as f:
         f.write(podcast_download_result.data)
+    logger.info(f"Stored audio episode at {destination}.")
+
+
+def store_upload_audio(
+    content: bytes, destination: Path, overwrite: bool = False
+) -> None:
+    if destination.exists():
+        if overwrite:
+            logger.info(
+                f"Audio file exists at {destination} but overwrite option is specified."
+            )
+        else:
+            logger.info(
+                f"Audio file exists at {destination}, skipping download."
+            )
+            return
+
+    humanized_bytes_str = sizeof_fmt(num=len(content))
+    logger.info(f"Get {humanized_bytes_str} episode from user-upload.")
+    with open(destination, "wb") as f:
+        f.write(content)
     logger.info(f"Stored audio episode at {destination}.")
 
 

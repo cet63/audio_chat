@@ -1,6 +1,6 @@
 import dataclasses
 import logging
-import pathlib
+from pathlib import Path
 
 
 @dataclasses.dataclass
@@ -23,25 +23,25 @@ def get_logger(name, level=logging.INFO):
 
 
 CACHE_DIR = "/cache"
-# Where downloaded podcasts are stored, by guid hash.
+# Where downloaded audios are stored, by guid hash.
 # Mostly .mp3 files 50-100MiB.
-RAW_AUDIO_DIR = pathlib.Path(CACHE_DIR, "raw_audio")
-# stores metadata of conferences as JSON.
-EP_METADATA_DIR = pathlib.Path(CACHE_DIR, "ep_metadata")
+RAW_AUDIO_DIR = Path(CACHE_DIR, "raw_audio")
+# stores metadata of audios as JSON.
+METADATA_DIR = Path(CACHE_DIR, "ep_metadata")
 
 # Completed episode transcriptions. Stored as flat files with
 # files structured as '{guid_hash}.json'.
-TRANSCRIPTIONS_DIR = pathlib.Path(CACHE_DIR, "transcriptions")
+TRANSCRIPTIONS_DIR = Path(CACHE_DIR, "transcriptions")
 
 # stores vector indexes
-VECTORINDEX_DIR = pathlib.Path(CACHE_DIR, "index")
+VECTORINDEX_DIR = Path(CACHE_DIR, "index")
 # stores summaries
-SUMMARY_DIR = pathlib.Path(CACHE_DIR, "summary")
+SUMMARY_DIR = Path(CACHE_DIR, "summary")
 
 # Location of modal checkpoint.
-MODEL_DIR = pathlib.Path(CACHE_DIR, "model")
+MODEL_DIR = Path(CACHE_DIR, "model")
 # Location of web frontend assets.
-ASSETS_PATH = pathlib.Path(__file__).parent / "frontend" / "dist"
+ASSETS_PATH = Path(__file__).parent / "frontend" / "dist"
 
 transcripts_per_podcast_limit = 2
 

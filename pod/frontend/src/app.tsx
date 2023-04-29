@@ -9,7 +9,7 @@ function NonEnglishLanguageWarning() {
   return (
     <div className="text-yellow-600">
       <span className="mr-2" role="img" aria-label="warning sign">⚠️</span>
-      Detected non-English podcast. Transcription may be garbage, but amusing.
+      Detected non-English audio. Transcription may be garbage, but amusing.
     </div>
   )
 }
@@ -44,32 +44,9 @@ function EpList({ eplist }) {
 }
 
 function Form() {
-  const [fileUrl, setFileUrl] = useState("");
   const [file, setFile] = useState<File>();
   const [searching, setSearching] = useState(false);
   const [eplist, setEplist] = useState();
-
-  const onChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setFileUrl(event.target.value);
-  };
-
-  const handleUrl = async (event: MouseEvent<HTMLElement>) => {
-    event.preventDefault();
-    setSearching(true);
-    const resp = await fetch('/api/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json;charset=utf-8' },
-      body: JSON.stringify({ "file_url": fileUrl })
-    });
-
-    if (resp.status !== 200) {
-      setSearching(false);
-      throw new Error("An error occurred: " + resp.status);
-    }
-    const body = await resp.json();
-    setEplist(body);
-    setSearching(false);
-  };
 
   const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -129,39 +106,14 @@ function Form() {
 
           <div className="text-gray-700">
             <p className="mb-4">
-              <strong>{/*Enter an audio's URL or */}Upload an audio file. Click on the result to transcribe and chat with it.</strong>
+              <strong>Upload an audio file<span className="text-red-400">(less than 50MB)</span>. Click on the result to transcribe and chat with it.</strong>
             </p>
-
-            {/*<p className="mb-1">
-              Try searching for 'https://www.roadshowing.com/roadshowing/info.html?id=76004'.
-            </p>*/}
             <p className="mb-1">
               <span>If you just want to see some examples, try this: </span>
               <a className="text-indigo-500 no-underline hover:underline" href="/#/episode/3f985a86e2c7948944282ccab50a07a3"><em>Apple Financial Results - Q4 2022</em></a>.
             </p>
           </div>
-  {/*
-          <div className="w-full flex space-x-2">
-            <div className="relative flex-1 w-full">
-              <SearchIcon className="absolute top-[11px] left-3 w-5 h-5 text-zinc-500" />
-              <input
-                type="text"
-                value={fileUrl}
-                onChange={onChange}
-                placeholder="Input an audio's URL"
-                className="h-10 w-full rounded-md pl-10 text-md text-gray-900 bg-gray-50 border-2 border-zinc-900"
-              />
-            </div>
-            <button
-              type="submit"
-              onClick={handleUrl}
-              disabled={searching || !fileUrl}
-              className="bg-indigo-400 disabled:bg-zinc-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded text-sm w-fit"
-            >
-              Search
-            </button>
-          </div>
-  */}
+  
           <div className="w-full flex space-x-2">
             <div className="relative flex-1 w-full">
               <SearchIcon className="absolute top-[11px] left-3 w-5 h-5 text-zinc-500" />
