@@ -317,12 +317,12 @@ function SummaryView({ episodeId }: { episodeId: string }) {
       <ul className="bg-white rounded-lg border border-gray-200 sm:w-384 text-gray-900">
         <li className="pb-3 sm:pb-4 px-6 py-2 border-b border-gray-200 w-full rounded-t-lg">
           <div className="flex items-center space-x-4">
+            {summary && !summarizing && <ResultCard result={summary} />}
             <button
               className="bg-indigo-400 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded m-auto"
               onClick={doSummary}
               disabled={summarizing}
             >Summarize</button>
-            {summary && !summarizing && <ResultCard result={summary} />}
           </div>
         </li>
       </ul>

@@ -1,4 +1,4 @@
-import { Key, useState } from "react";
+import { useState, ChangeEvent, MouseEvent } from "react";
 import { HashRouter, Link, Routes, Route } from "react-router-dom";
 import Episode from "./routes/episode";
 import Spinner from "./components/Spinner";
@@ -43,85 +43,22 @@ function EpList({ eplist }) {
   return <ul className="py-4 podcast-list">{listItems}</ul>;
 }
 
-// @ts-ignore
-function Form({ onSubmit, searching }) {
+function Form() {
   const [fileUrl, setFileUrl] = useState("");
-  const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFileUrl(event.target.value);
-  };
-
-  const handleSubmit = async (event: React.MouseEvent<HTMLElement>) => {
-    event.preventDefault();
-    await onSubmit(fileUrl);
-  };
-
-  return (
-    <form className="flex flex-col space-y-5 items-center">
-      <div>
-        <a
-          href="https://modal.com"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src={teckStackImgUrl} height="300px" alt="" />
-        </a>
-      </div>
-      <div className="text-2xl font-semibold text-gray-700">
-        Conference Chat
-      </div>
-
-      <div className="mb-2 mt-0 text-xl text-center">
-        Transcribe <em>any</em> conference in just 1-2 minutes!
-      </div>
-
-      <div className="text-gray-700">
-        <p className="mb-4">
-          <strong>Enter a conference website's URL. Click on the result to transcribe and chat with it.</strong>
-        </p>
-
-        <p className="mb-1">
-          Try searching for 'https://www.roadshowing.com/roadshowing/info.html?id=76004'.
-        </p>
-        <p className="mb-1">
-          <span>If you just want to see some examples, try this: </span>
-          <a className="text-indigo-500 no-underline hover:underline" href="/#/episode/3f985a86e2c7948944282ccab50a07a3"><em>Apple Financial Results - Q4 2022</em></a>.
-        </p>
-      </div>
-
-      <div className="w-full flex space-x-2">
-        <div className="relative flex-1 w-full">
-          <SearchIcon className="absolute top-[11px] left-3 w-5 h-5 text-zinc-500" />
-          <input
-            type="text"
-            value={fileUrl}
-            onChange={onChange}
-            placeholder="Input a conference's URL"
-            className="h-10 w-full rounded-md pl-10 text-md text-gray-900 bg-gray-50 border-2 border-zinc-900"
-          />
-        </div>
-        <button
-          type="submit"
-          onClick={handleSubmit}
-          disabled={searching || !fileUrl}
-          className="bg-indigo-400 disabled:bg-zinc-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded text-sm w-fit"
-        >
-          Search
-        </button>
-      </div>
-      <div>{searching && <Spinner size={10} />}</div>
-    </form>
-  );
-}
-
-function Search() {
+  const [file, setFile] = useState<File>();
   const [searching, setSearching] = useState(false);
   const [eplist, setEplist] = useState();
 
-  const handleSubmission = async (fileUrl: string) => {
+  const onChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setFileUrl(event.target.value);
+  };
+
+  const handleUrl = async (event: MouseEvent<HTMLElement>) => {
+    event.preventDefault();
     setSearching(true);
     const resp = await fetch('/api/search', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json;charset=utf-8'},
+      headers: { 'Content-Type': 'application/json;charset=utf-8' },
       body: JSON.stringify({ "file_url": fileUrl })
     });
 
@@ -134,14 +71,123 @@ function Search() {
     setSearching(false);
   };
 
+  const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFile(e.target.files[0]);
+    }
+  };
+  const handleFileUpload = async () => {
+    if (!file) {
+      return;
+    }
+
+    console.log(`file#${file.name}, size#${file.size}, type#${file.type}`);
+    if (file.size > 100 * 1024 * 1024) {
+      console.error(`file#${file.name} is too large!`);
+      return;
+    }
+
+    setSearching(true);
+    const data = new FormData();
+    data.append('file', file, file.name)
+    const resp = await fetch('/api/upload', {
+      method: 'POST',
+      body: data,
+    });
+
+    if (resp.status !== 200) {
+      setSearching(false);
+      console.error(`upload file#${file.name} failed, status#${resp.status}`)
+      throw new Error("An error occurred: " + resp.status);
+    }
+    const body = await resp.json();
+    setEplist(body);
+    setSearching(false);
+  };
+
+
   return (
     <div className="min-w-full min-h-screen screen pt-8">
       <div className="mx-auto max-w-2xl my-8 shadow-lg rounded-xl bg-white p-6">
-        <Form onSubmit={handleSubmission} searching={searching} />
+        <form className="flex flex-col space-y-5 items-center">
+          <div>
+            <a
+              href="https://modal.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img src={teckStackImgUrl} height="300px" alt="" />
+            </a>
+          </div>
+          <div className="text-2xl font-semibold text-gray-700">
+            Audio Transcriber and QnA
+          </div>
+
+          <div className="mb-2 mt-0 text-xl text-center">
+            Transcribe <em>any</em> audio in just 1-2 minutes!
+          </div>
+
+          <div className="text-gray-700">
+            <p className="mb-4">
+              <strong>{/*Enter an audio's URL or */}Upload an audio file. Click on the result to transcribe and chat with it.</strong>
+            </p>
+
+            {/*<p className="mb-1">
+              Try searching for 'https://www.roadshowing.com/roadshowing/info.html?id=76004'.
+            </p>*/}
+            <p className="mb-1">
+              <span>If you just want to see some examples, try this: </span>
+              <a className="text-indigo-500 no-underline hover:underline" href="/#/episode/3f985a86e2c7948944282ccab50a07a3"><em>Apple Financial Results - Q4 2022</em></a>.
+            </p>
+          </div>
+  {/*
+          <div className="w-full flex space-x-2">
+            <div className="relative flex-1 w-full">
+              <SearchIcon className="absolute top-[11px] left-3 w-5 h-5 text-zinc-500" />
+              <input
+                type="text"
+                value={fileUrl}
+                onChange={onChange}
+                placeholder="Input an audio's URL"
+                className="h-10 w-full rounded-md pl-10 text-md text-gray-900 bg-gray-50 border-2 border-zinc-900"
+              />
+            </div>
+            <button
+              type="submit"
+              onClick={handleUrl}
+              disabled={searching || !fileUrl}
+              className="bg-indigo-400 disabled:bg-zinc-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded text-sm w-fit"
+            >
+              Search
+            </button>
+          </div>
+  */}
+          <div className="w-full flex space-x-2">
+            <div className="relative flex-1 w-full">
+              <SearchIcon className="absolute top-[11px] left-3 w-5 h-5 text-zinc-500" />
+              <input
+                type="file"
+                accept="audio/*,video/*"
+                onChange={onFileChange}
+                placeholder="Upload an audio file"
+                className="h-10 w-full rounded-md pl-10 text-md text-gray-900 bg-gray-50 border-2 border-zinc-900"
+              />
+            </div>
+            <button
+              type="submit"
+              onClick={handleFileUpload}
+              disabled={searching || !file}
+              className="bg-indigo-400 disabled:bg-zinc-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded text-sm w-fit"
+            >
+              Upload
+            </button>
+          </div>
+
+          <div>{searching && <Spinner size={10} />}</div>
+        </form>
         {eplist && !searching && <EpList eplist={eplist} />}
       </div>
-
-    </div>
+    </div >
   );
 }
 
@@ -149,7 +195,7 @@ function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<Search />} />
+        <Route path="/" element={<Form />} />
         <Route path="episode/:episodeId" element={<Episode />} />
       </Routes>
     </HashRouter>

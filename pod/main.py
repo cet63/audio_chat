@@ -65,7 +65,7 @@ def get_summary_file(guid_hash: str, method: str) -> pathlib.Path:
     shared_volumes={config.CACHE_DIR: volume},
     keep_warm=2,
 )
-@modal.asgi_app()
+@modal.asgi_app(label="pod")
 def fastapi_app():
     from fastapi.staticfiles import StaticFiles
     from .api import web_app
