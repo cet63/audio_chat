@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Iterator, Tuple
 import hashlib
 import itertools
+import re
 
+import requests
 import modal
 
 from . import config, podcast
@@ -30,7 +32,6 @@ app_image = (
         "chromadb",
         "openai",
         "requests",
-        "content-size-limit-asgi",
     )
 )
 
@@ -76,35 +77,42 @@ def fastapi_app():
     image=app_image,
     shared_volumes={config.CACHE_DIR: volume},
 )
-def search(filename: str, content: bytes):
-    logger.info(f"Searching for '{filename}'")
-    return [process_file(filename, content)]
+def search(file_url: str):
+    logger.info(f"Searching for '{file_url}'")
+    pattern = r'https?://[^\s]+\.mp[34]'
+    if re.match(pattern, file_url):
+        return [process_url(file_url)]
     
-def process_file(filename: str, content: bytes):
-    guid_hash = hashlib.md5(content).hexdigest()
+    headers = {
+        "user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"
+    }
+    ret = requests.get(file_url, headers=headers)
+    text = ret.text
+    links = re.findall(pattern, text)
+    links = set([x.strip() for x in links])
+    return list(map(process_url, links))
+    
+def process_url(file_url: str):
+    url_hash = hashlib.md5(file_url.encode('utf-8')).hexdigest()
 
-    metadata_file = get_metadata_file(guid_hash)
-    logger.info(f"process_file#'{guid_hash}', hash#{guid_hash}")
-    if not metadata_file.exists():
-        config.RAW_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-        podcast.store_upload_audio(
-            content=content,
-            destination=config.RAW_AUDIO_DIR / guid_hash,
-        )
+    ep_metadata_file = get_metadata_file(url_hash)
+    logger.info(f"process_url#'{file_url}', hash#{url_hash}")
+    if not ep_metadata_file.exists():
+        ep_metadata_file.parent.mkdir(parents=True, exist_ok=True)
 
-        metadata_file.parent.mkdir(parents=True, exist_ok=True)
         ep_metadata = {
-            "guid_hash": guid_hash,
+            "guid_hash": url_hash,
             "transcribed": False,
-            "original_download_link": filename,
+            "original_download_link": file_url,
             "publish_date": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
-        with open(metadata_file, "w") as f:
+        with open(ep_metadata_file, "w") as f:
             json.dump(ep_metadata, f)
-        logger.info(f"Searching for '{filename}', wrote metadata to #{metadata_file}, success#{metadata_file.exists()}")
+
+        logger.info(f"Searching for '{file_url}', wrote metadata to #{ep_metadata_file}, success#{ep_metadata_file.exists()}")
         return ep_metadata
 
-    with open(metadata_file, "r") as f:
+    with open(ep_metadata_file, "r") as f:
         return json.load(f)
 
 
@@ -261,6 +269,7 @@ def process_episode(episode_id: str):
         model = config.DEFAULT_MODEL
         whisper._download(whisper._MODELS[model.name], str(config.MODEL_DIR), False)
 
+        config.RAW_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
         config.TRANSCRIPTIONS_DIR.mkdir(parents=True, exist_ok=True)
 
         metadata_path = get_metadata_file(episode_id)
@@ -269,6 +278,12 @@ def process_episode(episode_id: str):
             episode = dacite.from_dict(
                 data_class=podcast.EpisodeMetadata, data=data
             )
+
+        destination_path = config.RAW_AUDIO_DIR / episode_id
+        podcast.store_original_audio(
+            url=episode.original_download_link,
+            destination=destination_path,
+        )
 
         logger.info(
             f"Using the {model.name} model which has {model.params} parameters."
@@ -283,7 +298,7 @@ def process_episode(episode_id: str):
             logger.info("Skipping transcription.")
         else:
             transcribe_episode.call(
-                audio_filepath=config.RAW_AUDIO_DIR / episode_id,
+                audio_filepath=destination_path,
                 result_path=transcription_path,
                 model=model,
             )

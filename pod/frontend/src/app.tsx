@@ -44,37 +44,24 @@ function EpList({ eplist }) {
 }
 
 function Form() {
-  const [file, setFile] = useState<File>();
+  const [fileUrl, setFileUrl] = useState("");
   const [searching, setSearching] = useState(false);
   const [eplist, setEplist] = useState();
 
-  const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFile(e.target.files[0]);
-    }
+  const onChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setFileUrl(event.target.value);
   };
-  const handleFileUpload = async () => {
-    if (!file) {
-      return;
-    }
-
-    console.log(`file#${file.name}, size#${file.size}, type#${file.type}`);
-    if (file.size > 100 * 1024 * 1024) {
-      console.error(`file#${file.name} is too large!`);
-      return;
-    }
-
+  const handleUrl = async (event: MouseEvent<HTMLElement>) => {
+    event.preventDefault();
     setSearching(true);
-    const data = new FormData();
-    data.append('file', file, file.name)
-    const resp = await fetch('/api/upload', {
+    const resp = await fetch('/api/search', {
       method: 'POST',
-      body: data,
+      headers: {'Content-Type': 'application/json;charset=utf-8'},
+      body: JSON.stringify({ "file_url": fileUrl })
     });
 
     if (resp.status !== 200) {
       setSearching(false);
-      console.error(`upload file#${file.name} failed, status#${resp.status}`)
       throw new Error("An error occurred: " + resp.status);
     }
     const body = await resp.json();
@@ -106,7 +93,10 @@ function Form() {
 
           <div className="text-gray-700">
             <p className="mb-4">
-              <strong>Upload an audio file<span className="text-red-400">(less than 50MB)</span>. Click on the result to transcribe and chat with it.</strong>
+              <strong>Enter an audio's URL. Click on the result to transcribe and chat with it.</strong>
+            </p>
+            <p className="mb-1">
+              Try searching for 'https://www.roadshowing.com/roadshowing/info.html?id=76004'.
             </p>
             <p className="mb-1">
               <span>If you just want to see some examples, try this: </span>
@@ -118,20 +108,20 @@ function Form() {
             <div className="relative flex-1 w-full">
               <SearchIcon className="absolute top-[11px] left-3 w-5 h-5 text-zinc-500" />
               <input
-                type="file"
-                accept="audio/*,video/*"
-                onChange={onFileChange}
-                placeholder="Upload an audio file"
+                type="text"
+                value={fileUrl}
+                onChange={onChange}
+                placeholder="Input an audio's URL"
                 className="h-10 w-full rounded-md pl-10 text-md text-gray-900 bg-gray-50 border-2 border-zinc-900"
               />
             </div>
             <button
               type="submit"
-              onClick={handleFileUpload}
-              disabled={searching || !file}
+              onClick={handleUrl}
+              disabled={searching || !fileUrl}
               className="bg-indigo-400 disabled:bg-zinc-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded text-sm w-fit"
             >
-              Upload
+              Search
             </button>
           </div>
 

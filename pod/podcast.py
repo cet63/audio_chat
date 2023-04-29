@@ -29,7 +29,7 @@ class DownloadResult(NamedTuple):
     content_type: str
 
 
-def download_podcast_file(url: str) -> DownloadResult:
+def download_file(url: str) -> DownloadResult:
     req = urllib.request.Request(
         url,
         data=None,
@@ -72,32 +72,11 @@ def store_original_audio(
             )
             return
 
-    podcast_download_result = download_podcast_file(url=url)
+    podcast_download_result = download_file(url=url)
     humanized_bytes_str = sizeof_fmt(num=len(podcast_download_result.data))
     logger.info(f"Downloaded {humanized_bytes_str} episode from URL.")
     with open(destination, "wb") as f:
         f.write(podcast_download_result.data)
-    logger.info(f"Stored audio episode at {destination}.")
-
-
-def store_upload_audio(
-    content: bytes, destination: Path, overwrite: bool = False
-) -> None:
-    if destination.exists():
-        if overwrite:
-            logger.info(
-                f"Audio file exists at {destination} but overwrite option is specified."
-            )
-        else:
-            logger.info(
-                f"Audio file exists at {destination}, skipping download."
-            )
-            return
-
-    humanized_bytes_str = sizeof_fmt(num=len(content))
-    logger.info(f"Get {humanized_bytes_str} episode from user-upload.")
-    with open(destination, "wb") as f:
-        f.write(content)
     logger.info(f"Stored audio episode at {destination}.")
 
 

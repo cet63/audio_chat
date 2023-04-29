@@ -2,9 +2,9 @@ import json
 import time
 from typing import List, NamedTuple
 
-from fastapi import FastAPI, Request, UploadFile
+from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
-from content_size_limit_asgi import ContentSizeLimitMiddleware
+import re
 
 from . import config
 from .main import (
@@ -19,8 +19,6 @@ from .podcast import coalesce_short_transcript_segments
 
 logger = config.get_logger(__name__)
 web_app = FastAPI()
-MAX_UPLOAD_FILE = 50 * 1024 * 1024
-web_app.add_middleware(ContentSizeLimitMiddleware, max_content_size=MAX_UPLOAD_FILE)
 
 # A transcription taking > 10 minutes should be exceedingly rare.
 MAX_JOB_AGE_SECS = 10 * 60
@@ -31,20 +29,25 @@ class InProgressJob(NamedTuple):
     start_time: int
 
 
-@web_app.post("/api/upload")
-async def upload_endpoint(file: UploadFile, req: Request):
-    logger.info(f"req #{req.url.path} from client#{req.client}, file#{file.filename}")
-    content = await file.read()
-    return search.call(file.filename, content)
+class SearchItem(BaseModel):
+    file_url: str
+
+@web_app.post("/api/search")
+async def search_endpoint(item: SearchItem, req: Request):
+    logger.info(f"req #{req.url.path} from client#{req.client}, item#{item}")
+    file_url = item.file_url.strip()
+    if not re.match(r'^(http|https)?:/{2}\w.+$', file_url):
+        raise HTTPException(status_code=400, detail="Invalid url")
+    return search.call(file_url)
 
 
 @web_app.get("/api/episode/{guid_hash}")
 async def get_episode(guid_hash: str, req: Request):
     logger.info(f"req #{req.url.path} from client#{req.client}, guid_hash#{guid_hash}")
-    episode_metadata_file = get_metadata_file(guid_hash)
+    metadata_file = get_metadata_file(guid_hash)
     transcription_path = get_transcript_file(guid_hash)
 
-    with open(episode_metadata_file, "r") as f:
+    with open(metadata_file, "r") as f:
         metadata = json.load(f)
 
     if not transcription_path.exists():
