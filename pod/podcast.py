@@ -7,6 +7,7 @@ from . import config
 
 logger = config.get_logger(__name__)
 Segment = TypedDict("Segment", {"text": str, "start": float, "end": float})
+MAX_FILE = 300 * 1024 * 1024 #300mb
 
 
 @dataclasses.dataclass
@@ -41,8 +42,8 @@ def download_file(url: str) -> DownloadResult:
     with urllib.request.urlopen(req) as resp:
         length = resp.headers['content-length']
         logger.info(f"download file#{url}, size#{length}")
-        if int(length) > 100 * 1024 * 1024: # 100 MB
-            raise ValueError(f"Files larger than 100MB are not supported.")
+        if int(length) > MAX_FILE:
+            raise ValueError(f"Files larger than {MAX_FILE} are not supported.")
 
         return DownloadResult(
             data=resp.read(),

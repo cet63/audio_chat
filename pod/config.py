@@ -52,11 +52,12 @@ supported_whisper_models = {
     "small.en": ModelSpec(name="small.en", params="244M", relative_speed=6),
     "medium.en": ModelSpec(name="medium.en", params="769M", relative_speed=2),
     # Very slow. Will take around 45 mins to 1.5 hours to transcribe.
-    "large": ModelSpec(name="large", params="1550M", relative_speed=1),
+    #"large": ModelSpec(name="large", params="1550M", relative_speed=1),
 
     "base": ModelSpec(name="base", params="74M", relative_speed=16),
     "small": ModelSpec(name="small", params="244M", relative_speed=6),
     "medium": ModelSpec(name="medium", params="769M", relative_speed=2),
+    "large": ModelSpec(name="large-v2", params="1550M", relative_speed=1),
 }
 
-DEFAULT_MODEL = supported_whisper_models["base"]
+DEFAULT_MODEL = supported_whisper_models["small"]
