@@ -100,7 +100,7 @@ function Form() {
             </p>
             <p className="mb-1">
               <span>If you just want to see some examples, try this: </span>
-              <a className="text-indigo-500 no-underline hover:underline" href="/#/episode/3f985a86e2c7948944282ccab50a07a3"><em>Apple Financial Results - Q4 2022</em></a>.
+              <a className="text-indigo-500 no-underline hover:underline" href="/#/episode/573b6c8f702ccd5966b15a2068afc1e8"><em>Apple Financial Results - Q2 2023</em></a>.
             </p>
           </div>
   

@@ -169,7 +169,7 @@ def split_silences(
 @stub.function(
     image=app_image,
     shared_volumes={config.CACHE_DIR: volume},
-    cpu=4,
+    cpu=2,
     #gpu="A100-20G",
 )
 def transcribe_segment(

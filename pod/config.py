@@ -60,4 +60,4 @@ supported_whisper_models = {
     "large": ModelSpec(name="large-v2", params="1550M", relative_speed=1),
 }
 
-DEFAULT_MODEL = supported_whisper_models["small"]
+DEFAULT_MODEL = supported_whisper_models["base"]
