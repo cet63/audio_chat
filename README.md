@@ -8,11 +8,10 @@ There is a demo here: https://cet63--pod.modal.run/
 
 ## Architecture
 
-The entire application is hosted serverlessly on [Modal](https://modal.com) and consists of 3 components:
+The entire application is hosted serverlessly on [Modal](https://modal.com) and consists of these components:
 
 1. React + Vite SPA ([`pod/frontend/`](./pod/frontend/))
 2. FastAPI server ([`pod/api.py`](./pod/api.py))
-3. Modal async job queue ([`pod/main.py`](./pod/main.py))
 
 ## Developing locally
 
