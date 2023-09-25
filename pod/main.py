@@ -15,7 +15,7 @@ import modal
 from . import config, podcast
 
 logger = config.get_logger(__name__)
-volume = modal.SharedVolume().persist("dataset-cache-vol")
+volume = modal.NetworkFileSystem.persisted("dataset-cache-vol")
 
 app_image = (
     modal.Image.debian_slim()
@@ -41,7 +41,7 @@ stub = modal.Stub(
     secret=modal.Secret.from_name("my-openai-secret"),
 )
 
-stub.in_progress = modal.Dict()
+stub.in_progress = modal.Dict.new()
 
 
 def get_metadata_file(guid_hash: str) -> Path:
@@ -61,7 +61,7 @@ def get_summary_file(guid_hash: str, method: str) -> Path:
     mounts=[
         modal.Mount.from_local_dir(config.ASSETS_PATH, remote_path="/assets")
     ],
-    shared_volumes={config.CACHE_DIR: volume},
+    network_file_systems={config.CACHE_DIR: volume},
     keep_warm=2,
 )
 @modal.asgi_app(label="pod")
@@ -75,7 +75,7 @@ def fastapi_app():
 
 @stub.function(
     image=app_image,
-    shared_volumes={config.CACHE_DIR: volume},
+    network_file_systems={config.CACHE_DIR: volume},
 )
 def search(file_url: str):
     logger.info(f"Searching for '{file_url}'")
@@ -168,7 +168,7 @@ def split_silences(
 
 @stub.function(
     image=app_image,
-    shared_volumes={config.CACHE_DIR: volume},
+    network_file_systems={config.CACHE_DIR: volume},
     cpu=2,
     #gpu="A100-20G",
 )
@@ -217,7 +217,7 @@ def transcribe_segment(
 
 @stub.function(
     image=app_image,
-    shared_volumes={config.CACHE_DIR: volume},
+    network_file_systems={config.CACHE_DIR: volume},
     timeout=900,
 )
 def transcribe_episode(
@@ -255,7 +255,7 @@ def transcribe_episode(
 
 @stub.function(
     image=app_image,
-    shared_volumes={config.CACHE_DIR: volume},
+    network_file_systems={config.CACHE_DIR: volume},
     timeout=900,
 )
 def process_episode(episode_id: str):
@@ -356,7 +356,7 @@ def get_vector_index(guid_hash: str):
 @stub.function(
     image=app_image,
     secret=modal.Secret.from_name("my-openai-secret"),
-    shared_volumes={config.CACHE_DIR: volume},
+    network_file_systems={config.CACHE_DIR: volume},
     timeout=1000,
 )
 def qa(query: str, guid_hash: str) -> str:
@@ -384,7 +384,7 @@ def qa(query: str, guid_hash: str) -> str:
 @stub.function(
     image=app_image,
     secret=modal.Secret.from_name("my-openai-secret"),
-    shared_volumes={config.CACHE_DIR: volume},
+    network_file_systems={config.CACHE_DIR: volume},
     timeout=900,
 )
 def summarize(guid_hash: str, method: str = "1") -> str:
